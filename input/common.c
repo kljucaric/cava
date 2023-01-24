@@ -1,4 +1,4 @@
-#include "input/common.h"
+#include "common.h"//"input/common.h"
 #include <limits.h>
 #include <math.h>
 #include <string.h>

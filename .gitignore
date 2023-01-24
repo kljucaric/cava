@@ -8,6 +8,7 @@ Makefile.in
 aclocal.m4
 ar-lib
 autom4te.cache/
+cava_win/
 compile
 config.guess
 config.log

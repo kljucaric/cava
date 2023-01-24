@@ -5,12 +5,11 @@
 #include <SDL2/SDL.h>
 #endif
 
-#include "output/sdl_cava.h"
-
+#include "sdl_cava.h"//"output/sdl_cava.h"
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "util.h"
+#include "../util.h"
 
 SDL_Window *gWindow = NULL;
 
@@ -43,8 +42,9 @@ void init_sdl_window(int width, int height, int x, int y) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
     } else {
-        gWindow =
-            SDL_CreateWindow("cava", x, y, width, height, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+        gWindow = SDL_CreateWindow("onion", x, y, width, height,
+                                   SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE |
+                                       SDL_WINDOW_FULLSCREEN_DESKTOP);
         if (gWindow == NULL) {
             printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
         } else {
@@ -71,15 +71,69 @@ int draw_sdl(int bars_count, int bar_width, int bar_spacing, int remainder, int 
              const int bars[], int previous_frame[], int frame_time, enum orientation orientation) {
 
     bool update = false;
-    int rc = 0;
+    int rc = 0, max_bar = 0, mb_pos = 0, color = 0, g_pos = 1, r_pos = 1, b_pos = 1;
     SDL_Rect fillRect;
 
     for (int bar = 0; bar < bars_count; bar++) {
         if (bars[bar] != previous_frame[bar]) {
             update = true;
-            break;
+            //break;
+        }
+
+        if (bars[bar] > max_bar) {
+            mb_pos = bar;
+            max_bar = bars[bar];
         }
     }
+
+    color = mb_pos % 3;
+
+    if (mb_pos > bars_count / 2) {
+        color = 2 - color;   
+    }
+
+    switch (color) { 
+        case 1:
+        if (g_pos == 1) {
+            fg_color.G = fg_color.G + 0x01;
+        } else {
+            fg_color.G = fg_color.G - 0x01;
+        }
+        
+        if (fg_color.G == 0xFF) {
+            g_pos = 0;
+        } else if (fg_color.G == 0x00) {
+            g_pos = 1;
+        }
+        break;
+        case 2:
+        if (b_pos == 1) {
+            fg_color.B = fg_color.B + 0x01;
+        } else {
+            fg_color.B = fg_color.B - 0x01;
+        }
+
+        if (fg_color.B == 0xFF) {
+            b_pos = 0;
+        } else if (fg_color.B == 0x00) {
+            b_pos = 1;
+        }
+        break;
+        default:
+        if (r_pos == 1) {
+            fg_color.R = fg_color.R + 0x01;
+        } else {
+            fg_color.R = fg_color.R - 0x01;
+        }
+
+        if (fg_color.R == 0xFF) {
+            r_pos = 0;
+        } else if (fg_color.R == 0x00) {
+            r_pos = 1;
+        }
+        break;
+    }
+
 
     if (update) {
         SDL_SetRenderDrawColor(gRenderer, bg_color.R, bg_color.G, bg_color.B, 0xFF);
