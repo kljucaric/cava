@@ -26,6 +26,8 @@ struct colors {
 struct colors fg_color = {0};
 struct colors bg_color = {0};
 
+int bar_sweep = 0;
+
 static void parse_color(char *color_string, struct colors *color) {
     if (color_string[0] == '#') {
         sscanf(++color_string, "%02hx%02hx%02hx", &color->R, &color->G, &color->B);
@@ -42,9 +44,8 @@ void init_sdl_window(int width, int height, int x, int y) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
     } else {
-        gWindow = SDL_CreateWindow("onion", x, y, width, height,
-                                   SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE |
-                                       SDL_WINDOW_FULLSCREEN_DESKTOP);
+        gWindow =
+            SDL_CreateWindow("onion", x, y, width, height, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_FULLSCREEN_DESKTOP);
         if (gWindow == NULL) {
             printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
         } else {
@@ -71,69 +72,78 @@ int draw_sdl(int bars_count, int bar_width, int bar_spacing, int remainder, int 
              const int bars[], int previous_frame[], int frame_time, enum orientation orientation) {
 
     bool update = false;
-    int rc = 0, max_bar = 0, mb_pos = 0, color = 0, g_pos = 1, r_pos = 1, b_pos = 1;
+    int rc = 0, color = 0, pos = 0, intense = 0x00;
     SDL_Rect fillRect;
 
     for (int bar = 0; bar < bars_count; bar++) {
         if (bars[bar] != previous_frame[bar]) {
             update = true;
-            //break;
-        }
-
-        if (bars[bar] > max_bar) {
-            mb_pos = bar;
-            max_bar = bars[bar];
+            break;
         }
     }
 
-    color = mb_pos % 3;
+    color = (bar_sweep + bars[bar_sweep])  % 3;
 
-    if (mb_pos > bars_count / 2) {
-        color = 2 - color;   
+    // high freq increase color, low freq decrease color
+    if (bar_sweep > bars_count / 2) {
+        color = 2 - color;  // inverse color for right channel
+        if (bar_sweep > (3 * (bar_sweep / 4))) {
+            pos = 0;
+        } else {
+            pos = 1;
+        }
+    } else {
+        if (bar_sweep > (bar_sweep / 4)) {
+            pos = 1;
+        } else {
+            pos = 0;
+        }
     }
 
+    if (bars[bar_sweep] < (height / 4) || bars[bar_sweep] > (3 * (height / 4))) {
+        intense = 0x02;
+    } else {
+        intense = 0x01;
+    }
+
+    // color shift smoothing
     switch (color) { 
         case 1:
-        if (g_pos == 1) {
-            fg_color.G = fg_color.G + 0x01;
+        if (pos == 1) {
+            if (fg_color.G < 0xFE) {
+                fg_color.G = fg_color.G + intense;
+            }
         } else {
-            fg_color.G = fg_color.G - 0x01;
-        }
-        
-        if (fg_color.G == 0xFF) {
-            g_pos = 0;
-        } else if (fg_color.G == 0x00) {
-            g_pos = 1;
+            if (fg_color.G > 0x01) {
+                fg_color.G = fg_color.G - intense;
+            }
         }
         break;
         case 2:
-        if (b_pos == 1) {
-            fg_color.B = fg_color.B + 0x01;
+        if (pos == 1) {
+            if (fg_color.B < 0xFE) {
+                fg_color.B = fg_color.B + intense;
+            }
         } else {
-            fg_color.B = fg_color.B - 0x01;
-        }
-
-        if (fg_color.B == 0xFF) {
-            b_pos = 0;
-        } else if (fg_color.B == 0x00) {
-            b_pos = 1;
+            if (fg_color.B > 0x01) {
+                fg_color.B = fg_color.B - intense;
+            }
         }
         break;
         default:
-        if (r_pos == 1) {
-            fg_color.R = fg_color.R + 0x01;
+        if (pos == 1) {
+            if (fg_color.R < 0xFE) {
+                fg_color.R = fg_color.R + intense;
+            }
         } else {
-            fg_color.R = fg_color.R - 0x01;
-        }
-
-        if (fg_color.R == 0xFF) {
-            r_pos = 0;
-        } else if (fg_color.R == 0x00) {
-            r_pos = 1;
+            if (fg_color.R > 0x01) {
+                fg_color.R = fg_color.R - intense;
+            }
         }
         break;
     }
 
+    bar_sweep = (bar_sweep + 1) % bars_count;
 
     if (update) {
         SDL_SetRenderDrawColor(gRenderer, bg_color.R, bg_color.G, bg_color.B, 0xFF);
